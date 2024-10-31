@@ -1,166 +1,133 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// Define the Node structure
-typedef struct Node {
-    int val;
-    struct Node *next;
-    struct Node *prev;
+typedef struct Node
+{
+  char val;
+  struct Node *next;
 } Node;
 
-// Function prototypes
-void insertAtPosition(Node **head, int position, int value);
-void deleteAtPosition(Node **head, int position);
-void countNodes(Node *head);
-void reversePrint(Node *head);
-void reverseList(Node **head);
-void printList(Node *head);
+typedef struct Stack
+{
+  Node *top;
+} Stack;
 
-// Main function
-int main() {
-    Node *head = NULL;
-    
-    // Insert nodes
-    insertAtPosition(&head, 1, 10);
-    insertAtPosition(&head, 2, 20);
-    insertAtPosition(&head, 3, 30);
-    insertAtPosition(&head, 4, 40);
-    
-    printf("Original list:\n");
-    printList(head);
+void push(Stack *stack, char val)
+{
+  Node *newNode = (Node *)malloc(sizeof(Node));
+  newNode->val = val;
+  newNode->next = stack->top;
+  stack->top = newNode;
+}
 
-    printf("Number of nodes:\n");
-    countNodes(head);
+char pop(Stack *stack)
+{
+  if (stack->top == NULL)
+  {
+    printf("Stack underflow\n");
+    return '\0';
+  }
 
-    printf("Reverse print:\n");
-    reversePrint(head);
+  char val = stack->top->val;
+  Node *temp = stack->top;
+  stack->top = stack->top->next;
+  free(temp);
+  return val;
+}
 
-    printf("Reversing the list:\n");
-    reverseList(&head);
-    printList(head);
+char peek(Stack *stack)
+{
+  if (stack->top == NULL)
+  {
+    return '\0';
+  }
+  return stack->top->val;
+}
 
-    printf("Deleting node at position 2:\n");
-    deleteAtPosition(&head, 2);
-    printList(head);
+int isEmpty(Stack *stack)
+{
+  return stack->top == NULL;
+}
 
+int precedence(char op)
+{
+  if (op == '^')
+  {
+    return 3;
+  }
+  else if (op == '*' || op == '/' || op == '%')
+  {
+    return 2;
+  }
+  else if (op == '+' || op == '-')
+  {
+    return 1;
+  }
+  else
+  {
     return 0;
+  }
 }
 
-// Function to insert a node at a specified position
-void insertAtPosition(Node **head, int position, int value) {
-    Node *newNode = (Node *)malloc(sizeof(Node));
-    Node *temp = *head;
-    newNode->val = value;
-    newNode->next = NULL;
-    newNode->prev = NULL;
-
-    if (position == 1) {
-        newNode->next = *head;
-        if (*head != NULL) {
-            (*head)->prev = newNode;
-        }
-        *head = newNode;
-    } else {
-        for (int i = 1; i < position - 1; i++) {
-            if (temp == NULL) {
-                printf("Position out of bounds\n");
-                free(newNode);
-                return;
-            }
-            temp = temp->next;
-        }
-        newNode->next = temp->next;
-        newNode->prev = temp;
-        if (temp->next != NULL) {
-            temp->next->prev = newNode;
-        }
-        temp->next = newNode;
-    }
+int isOperator(char ch)
+{
+  return (ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '%' || ch == '^');
 }
 
-// Function to delete a node from a specified position
-void deleteAtPosition(Node **head, int position) {
-    Node *temp = *head;
-    if (temp == NULL) {
-        printf("List is empty\n");
-        return;
+char *inToPostfix(char *s)
+{
+  Stack stack = {NULL};
+  char *res = (char *)malloc(100 * sizeof(char));
+  int r = 0;
+  int i = 0;
+
+  while (s[i] != '\0')
+  {
+    if (isalnum(s[i]))
+    {
+      res[r++] = s[i];
     }
-    if (position == 1) {
-        *head = temp->next;
-        if (*head != NULL) {
-            (*head)->prev = NULL;
-        }
-        free(temp);
-        return;
+    else if (s[i] == '(')
+    {
+      push(&stack, s[i]);
     }
-    for (int i = 1; i < position; i++) {
-        temp = temp->next;
-        if (temp == NULL) {
-            printf("Position out of bounds\n");
-            return;
-        }
+    else if (s[i] == ')')
+    {
+      while (!isEmpty(&stack) && peek(&stack) != '(')
+      {
+        res[r++] = pop(&stack);
+      }
+      pop(&stack);
     }
-    temp->prev->next = temp->next;
-    if (temp->next != NULL) {
-        temp->next->prev = temp->prev;
+    else if (isOperator(s[i]))
+    {
+      while (!isEmpty(&stack) && precedence(peek(&stack)) >= precedence(s[i]))
+      {
+        res[r++] = pop(&stack);
+      }
+      push(&stack, s[i]);
     }
-    free(temp);
+    i++;
+  }
+
+  while (!isEmpty(&stack))
+  {
+    res[r++] = pop(&stack);
+  }
+
+  res[r] = '\0';
+  return res;
 }
 
-// Function to count the number of nodes in the linked list
-void countNodes(Node *head) {
-    int count = 0;
-    Node *temp = head;
-    while (temp != NULL) {
-        count++;
-        temp = temp->next;
-    }
-    printf("Count: %d\n", count);
+int main()
+{
+  char expression[] = "a+b*(c^d-e)";
+  char *postfix = inToPostfix(expression);
+
+  printf("Infix: %s\n", expression);
+  printf("Postfix: %s\n", postfix);
+
+  free(postfix);
+  return 0;
 }
-
-// Function to print the list in reverse order
-void reversePrint(Node *head) {
-    Node *temp = head;
-    if (temp == NULL) {
-        printf("List is empty\n");
-        return;
-    }
-    while (temp->next != NULL) {
-        temp = temp->next;
-    }
-    while (temp != NULL) {
-        printf("| %d |\n", temp->val);
-        temp = temp->prev;
-    }
-}
-
-// Function to reverse the entire list
-void reverseList(Node **head) {
-    Node *temp = NULL;
-    Node *current = *head;
-
-    while (current != NULL) {
-        temp = current->prev;
-        current->prev = current->next;
-        current->next = temp;
-        current = current->prev;
-    }
-    if (temp != NULL) {
-        *head = temp->prev;
-    }
-}
-
-// Function to print the list
-void printList(Node *head) {
-    Node *temp = head;
-    if (temp == NULL) {
-        printf("List is empty\n");
-        return;
-    }
-    while (temp != NULL) {
-        printf("| %d | ", temp->val);
-        temp = temp->next;
-    }
-    printf("\n");
-}
-
